@@ -1,26 +1,39 @@
 import { useState, useEffect } from 'react';
+import api from 'C:/Users/mahin/OneDrive/Desktop/V/Projects/react+vite/utubeCopy/src/api/axios.js'; // Make sure this is correctly set up
 
 function App() {
   const [alarmTime, setAlarmTime] = useState('');
   const [alarms, setAlarms] = useState([]);
 
-  // 🔔 Check for alarm match every minute
+  // Fetch alarms on component mount
   useEffect(() => {
-    const interval = setInterval(() => {
-      const now = new Date();
-      const current = now.toTimeString().slice(0, 5); // Format: HH:MM
-      if (alarms.includes(current)) {
-        alert(`⏰ Alarm ringing for ${current}`);
-      }
-    }, 60000); // every 1 minute
+    fetchAlarms();
+  }, []);
 
-    return () => clearInterval(interval); // cleanup
-  }, [alarms]);
+  const fetchAlarms = async () => {
+    try {
+      const res = await api.get('/alarms');
+      setAlarms(res.data);
+    } catch (err) {
+      console.error('API error:', err);
+    }
+  };
 
-  const addAlarm = () => {
-    if (!alarmTime || alarms.includes(alarmTime)) return;
-    setAlarms([...alarms, alarmTime]);
-    setAlarmTime('');
+  // Add new alarm to backend
+  const addAlarm = async () => {
+    if (!alarmTime || alarms.find(a => a.time === alarmTime)) return;
+
+    try {
+      const res = await api.post('/alarms', {
+        time: alarmTime,
+        label: 'Default Alarm'
+      });
+
+      setAlarms([...alarms, res.data]);
+      setAlarmTime('');
+    } catch (error) {
+      console.error('Failed to add alarm:', error);
+    }
   };
 
   return (
@@ -41,9 +54,9 @@ function App() {
       </button>
 
       <ul className="list-group">
-        {alarms.map((time, index) => (
-          <li className="list-group-item" key={index}>
-            Alarm set for: {time}
+        {alarms.map((alarm) => (
+          <li className="list-group-item" key={alarm._id}>
+            Alarm set for: {alarm.time} — {alarm.label}
           </li>
         ))}
       </ul>
